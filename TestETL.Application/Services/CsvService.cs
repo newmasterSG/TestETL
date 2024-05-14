@@ -18,20 +18,22 @@ namespace TestETL.Application.Services
             };
 
             List<CsvDTO> duplicates = new List<CsvDTO>();
+            string pathProject = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string pathToFolder = Path.Combine(pathProject, "Data");
+            string pathToFileDuplicate = Path.Combine(pathToFolder, "dublicate.csv");
+
             using (var reader = new StreamReader(path))
             using (var csv = new CsvReader(reader, config))
             {
                 var records = csv.GetRecords<CsvDTO>();
                 var dTOs = records.ToList();
 
+                //Search for duplicates
                 duplicates = dTOs.GroupBy(x => new { x.PickupDateTime, x.DropoffDateTime, x.PassengerCount })
                       .Where(g => g.Count() > 1)
                       .SelectMany(g => g)
                       .ToList();
 
-                string pathProject = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                string pathToFolder = Path.Combine(pathProject, "Data");
-                string pathToFileDuplicate = Path.Combine(pathToFolder, "dublicate.csv");
                 await CreateDuplicatesCsvAsync(duplicates, pathToFileDuplicate);
 
                 var withoutDuplicate = dTOs.DistinctBy(x => new { x.PickupDateTime, x.DropoffDateTime, x.PassengerCount }).ToList();

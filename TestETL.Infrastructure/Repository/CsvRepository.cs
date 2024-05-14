@@ -35,6 +35,7 @@ namespace TestETL.Infrastructure.Repository
                 TipAmount = x.TipAmount
             }).ToList();
 
+            //For better performance(without tracking ef core more better add to db)
             etldbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
             try
