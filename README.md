@@ -12,3 +12,4 @@ Scaffold-DbContext ‘Server=.\SQLExpress;Database=ETLDb;Trusted_Connection=True
 
 In my opinion you can start to do through parallel foreach the creation of dto, also do more batch, like ef core supports this. If you need to read data, you can do it in such a way that we find out how many records there are and batch depending on it, you can also use semaphore.
 
+2. Number of rows after running program - 29889 rows
