@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿namespace TestETL.Domain.Models;
 
-namespace TestETL.Domain.Models;
-
-public partial class Csv
+public class Csv
 {
     public int Id { get; set; }
 

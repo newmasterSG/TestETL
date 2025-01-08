@@ -1,7 +1,9 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 using System.Reflection;
 using TestETL.Application.Services;
 using TestETL.Infrastructure.Repository;
+using TestETL.Infrastructure.Db;
 
 namespace TestETL.Program
 {
@@ -17,7 +19,9 @@ namespace TestETL.Program
             string pathToFolder = Path.Combine(pathProject, "Data");
             string pathToFile = Path.Combine(pathToFolder, "sample-cab-data.csv");
 
-            var csvRep = new CsvRepository(new Domain.Models.EtldbContext());
+            using var dbcontext = new EtldbContext();
+            dbcontext.Database.Migrate();
+            var csvRep = new CsvRepository(dbcontext);
             var csvService = new CsvService(csvRep);
             await csvService.AddDataToDb(pathToFile);
 

@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using TestETL.Domain.Models;
+using TestETL.Infrastructure.Db;
 using TestETL.Infrastructure.DTO;
 using TestETL.Infrastructure.Interfaces;
 
@@ -16,7 +17,21 @@ namespace TestETL.Infrastructure.Repository
 
         public async Task AddBatchToDbAsync(List<CsvDTO> batch)
         {
+            if (batch == null || batch.Count == 0)
+            {
+                Console.WriteLine("Batch is empty or null");
+                return;
+            }
+
+            var invalidItems = batch.Where(x => x == null || string.IsNullOrEmpty(x.PickupDateTime) || string.IsNullOrEmpty(x.DropoffDateTime)).ToList();
+            if (invalidItems.Any())
+            {
+                Console.WriteLine($"Found invalid items: {invalidItems.Count}");
+            }
+
             var withoutDuplicate = batch.DistinctBy(x => new { x.PickupDateTime, x.DropoffDateTime, x.PassengerCount }).ToList();
+
+            Console.WriteLine($"Filtered duplicates, remaining items: {withoutDuplicate.Count}");
 
             var cvs = withoutDuplicate.Select(x => new Csv
             {
@@ -35,19 +50,35 @@ namespace TestETL.Infrastructure.Repository
                 TipAmount = x.TipAmount
             }).ToList();
 
-            //For better performance(without tracking ef core more better add to db)
+            Console.WriteLine($"Converted {cvs.Count} items to CSV format");
+
             etldbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
-            try
-            {
-                await etldbContext.Csvs.AddRangeAsync(cvs);
+            var semaphore = new SemaphoreSlim(5);
 
-                await etldbContext.SaveChangesAsync();
-            }
-            finally
+            var tasks = cvs.Select(async csv =>
             {
-                etldbContext.ChangeTracker.AutoDetectChangesEnabled = true;
-            }
+                await semaphore.WaitAsync();
+                try
+                {
+                    if (csv != null) 
+                    {
+                        await etldbContext.Csvs.AddAsync(csv);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }).ToList();
+
+            await Task.WhenAll(tasks);
+
+            etldbContext.ChangeTracker.AutoDetectChangesEnabled = true;
         }
 
         public async Task AddListAsync(ICollection<Csv> entities, CancellationToken cancellationToken = default)
@@ -83,6 +114,11 @@ namespace TestETL.Infrastructure.Repository
                         .SetProperty(x => x.TpepPickupDatetime, entity.TpepPickupDatetime)
                         .SetProperty(x => x.TpepDropoffDatetime, entity.TpepDropoffDatetime),
                 cancellationToken);
+        }
+
+        public async Task SaveChangesAsyc(CancellationToken cancellationToken = default)
+        {
+            await etldbContext.SaveChangesAsync(cancellationToken);
         }
     }
 }

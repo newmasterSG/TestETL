@@ -18,5 +18,7 @@ namespace TestETL.Infrastructure.Interfaces
         Task DeleteAsync(int id, CancellationToken cancellationToken = default);
 
         Task AddListAsync(ICollection<TEntityDTO> entities, CancellationToken cancellationToken = default);
+
+        Task SaveChangesAsyc(CancellationToken cancellationToken = default);
     }
 }

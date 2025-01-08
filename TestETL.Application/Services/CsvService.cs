@@ -28,22 +28,31 @@ namespace TestETL.Application.Services
                 var records = csv.GetRecords<CsvDTO>();
                 var dTOs = records.ToList();
 
-                //Search for duplicates
-                duplicates = dTOs.GroupBy(x => new { x.PickupDateTime, x.DropoffDateTime, x.PassengerCount })
-                      .Where(g => g.Count() > 1)
-                      .SelectMany(g => g)
-                      .ToList();
-
-                await CreateDuplicatesCsvAsync(duplicates, pathToFileDuplicate);
+                var duplicatesTask = Task.Run(() =>
+                {
+                    return dTOs.GroupBy(x => new { x.PickupDateTime, x.DropoffDateTime, x.PassengerCount })
+                        .Where(g => g.Count() > 1)
+                        .SelectMany(g => g)
+                        .ToList();
+                });
 
                 var withoutDuplicate = dTOs.DistinctBy(x => new { x.PickupDateTime, x.DropoffDateTime, x.PassengerCount }).ToList();
 
                 int batchSize = 1000;
+                var batchTasks = new List<Task>();
+
                 for (int i = 0; i < withoutDuplicate.Count; i += batchSize)
                 {
                     var batch = withoutDuplicate.Skip(i).Take(batchSize).ToList();
-                    await csvRepository.AddBatchToDbAsync(batch);
+                    var batchTask = csvRepository.AddBatchToDbAsync(batch);
+                    batchTasks.Add(batchTask);
                 }
+
+                await Task.WhenAll(batchTasks);
+                await csvRepository.SaveChangesAsyc();
+
+                duplicates = await duplicatesTask;
+                await CreateDuplicatesCsvAsync(duplicates, pathToFileDuplicate);
             }
         }
 
