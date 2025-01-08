@@ -1,11 +1,5 @@
 # TestETL
 
-Since the database was created initially, I used the database first approach.
-
-This line should create the dbcontext as it is in ms sql
-
-Scaffold-DbContext ‘Server=.\SQLExpress;Database=ETLDb;Trusted_Connection=True;TrustServerCertificate=true;’ Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models
-
 # Ansewers to questions:
  
 1. Describe in a few sentences what you would change if you knew it would be used for a 10GB CSV input file. 
